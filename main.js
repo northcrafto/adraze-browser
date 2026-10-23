@@ -144,8 +144,10 @@ function hostCategory(url) {
 let engine = null;                       // sätts till motorn när den är laddad (används som "är igång"-flagga)
 const blockedSessions = new Set();
 // Allowlist: blockera ALDRIG anrop till inloggnings-/konto-domäner (annars kan 2FA-verifiering m.m. hänga)
-const ADBLOCK_ALLOW = /(^|\.)(github\.com|githubusercontent\.com|githubassets\.com|github\.io|accounts\.google\.com|login\.microsoftonline\.com|login\.live\.com|appleid\.apple\.com|okta\.com|auth0\.com|duosecurity\.com)$/i;
-function adblockAllowHost(url) { try { return ADBLOCK_ALLOW.test(new URL(url).hostname); } catch { return false; } }
+const ADBLOCK_ALLOW = /(^|\.)(github\.com|githubusercontent\.com|githubassets\.com|github\.io|gitlab\.com|bitbucket\.org|accounts\.google\.com|accounts\.youtube\.com|myaccount\.google\.com|apis\.google\.com|ssl\.gstatic\.com|recaptcha\.net|hcaptcha\.com|challenges\.cloudflare\.com|arkoselabs\.com|funcaptcha\.com|login\.microsoftonline\.com|login\.microsoft\.com|login\.live\.com|account\.live\.com|aadcdn\.msauth\.net|aadcdn\.msftauth\.net|logincdn\.msauth\.net|appleid\.apple\.com|idmsa\.apple\.com|appleid\.cdn-apple\.com|okta\.com|oktacdn\.com|auth0\.com|duosecurity\.com|onelogin\.com|pingidentity\.com|id\.atlassian\.com|discord\.com|steamcommunity\.com|login\.yahoo\.com|bankid\.com|frejaeid\.com|signicat\.com|criipto\.com|stripe\.com|js\.stripe\.com|paypal\.com|klarna\.com|adyen\.com|vercel\.com|cloudflare\.com|dash\.cloudflare\.com)$/i;
+// Inloggning med Google m.fl. hämtar t.ex. reCAPTCHA från www.google.com/recaptcha – släpp alltid igenom
+const ADBLOCK_ALLOW_PATH = /^https:\/\/(www\.)?(google\.com|gstatic\.com)\/(recaptcha|accounts|signin)\//i;
+function adblockAllowHost(url) { try { return ADBLOCK_ALLOW_PATH.test(url) || ADBLOCK_ALLOW.test(new URL(url).hostname); } catch { return false; } }
 const adblock = new AdrazeAdblock({
   dir: path.join(__dirname, 'adraze'),
   preloadPath: path.join(__dirname, 'adraze-preload.js'),
@@ -154,6 +156,7 @@ const adblock = new AdrazeAdblock({
   // kat: 'ad' | 'tracker' | 'danger' – samma indelning som tilläggets ads/privacy/security
   onBlocked: (url, kat, typ) => {
     adblockCount++; broadcast('adblock:count', adblockCount);
+    if (process.env.ADRAZE_DEBUG) console.log('[adraze] stoppad', kat, typ, url.slice(0, 140));
     if (kat === 'danger' && typ === 'main_frame') return;   // räknas av skalets varning (en gång per sida)
     broadcast('adblock:hit', kat === 'ad' && hostCategory(url) === 'tracker' ? 'tracker' : kat);
   },

@@ -275,6 +275,9 @@ class AdrazeAdblock {
         const typ = TYPE_MAP[d.resourceType] || 'other';
         const kalla = typ === 'main_frame' ? (d.referrer || '') : ((d.frame && d.frame.url) || d.referrer || '');
         if (typ === 'main_frame' && this.fortsatt.has(hostAv(d.url))) { cb({}); return; }
+        // Inloggnings-/2FA-sidor (GitHub, Google-konto, Microsoft …): blockera ingenting på dem
+        if (typ !== 'main_frame' && kalla && this.allowHost(kalla)) { cb({}); return; }
+        if (d.webContents && !d.webContents.isDestroyed() && this.allowHost(d.webContents.getURL() || '')) { cb({}); return; }
         const r = this.match(this.fraga(d.url, typ, kalla));
         if (!r) { cb({}); return; }
         this.onBlocked(d.url, r.kat, typ);
